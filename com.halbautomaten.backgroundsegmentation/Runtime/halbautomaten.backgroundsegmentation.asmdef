@@ -1,0 +1,17 @@
+{
+    "name": "com.halbautomaten.backgroundsegmentation",
+    "rootNamespace": "halbautomaten.BackgroundSegmentation",
+    "references": [],
+    "includePlatforms": [
+        "Editor",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
