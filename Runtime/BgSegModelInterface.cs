@@ -3,6 +3,9 @@ using System.Runtime.InteropServices;
 
 namespace halbautomaten.BackgroundSegmentation
 {
+    /// <summary>
+    /// Interface to functions in the plugin DLL
+    /// </summary>
     public static class BgSegModelInterface
     {
         const string dll = "BgSegUnityOnnxPlugin";
@@ -31,7 +34,7 @@ namespace halbautomaten.BackgroundSegmentation
         public static extern void InitONNXRuntime();
 
         [DllImport(dll)]
-        public static extern bool LoadModel(int modelId, string modelPath, string executionProvider);
+        public static extern bool LoadModel(int modelId, string modelPath, string executionProvider, int tensorWidth, int tensorHeight);
 
         [DllImport(dll)]
         public static extern bool RunModel(int modelId, IntPtr input, int[] inputDim, IntPtr output, int[] outputDim);

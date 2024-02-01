@@ -14,3 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   OnnxModelName: midas_v21_model-small.onnx
   OnnxModelType: 1
+  modelTensorWidth: 256
+  modelTensorHeight: 256

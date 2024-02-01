@@ -1,8 +1,15 @@
 {
 	"name": "com.halbautomaten.backgroundsegmentation",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Portrait matting / background segmentation via ML models and ONNX runtime for Unity",
 	"displayName": "Background Segmentation",
 	"author": "halbautomaten",
-	"unity": "2022.3"
+	"unity": "2022.3",
+	"samples": [
+		{
+			"displayName": "Sample",
+			"description": "Minimal example demonstrating the usage",
+			"path": "Samples~/"
+		}
+	]
 }
