@@ -8,6 +8,9 @@ using UnityEngine.Rendering;
 
 namespace halbautomaten.BackgroundSegmentation
 {
+    /// <summary>
+    /// Main logic for  background segmentation package.
+    /// </summary>
     public class BgSegController
     {
         List<string> executionProviders = new();
@@ -25,6 +28,13 @@ namespace halbautomaten.BackgroundSegmentation
         List<Texture2D> modelResultTexture = new();
         Material compositorMaterial;
         int processPhase = 0;
+        bool haveMattingTex = false;
+
+        float depthEdge0 = 0.35f;
+        float depthEdge1 = 0.65f;
+
+        public float DepthEdge0 { set => depthEdge0 = value; }
+        public float DepthEdge1 { set => depthEdge1 = value; }
 
         string ModelFolder
         {
@@ -74,6 +84,12 @@ namespace halbautomaten.BackgroundSegmentation
             isInitialized = true;
         }
 
+        public void CleanUp()
+        {
+            BgSegModelInterface.CleanUp();
+            isInitialized = false;
+        }
+
         /// <summary>
         /// Get the list of available ONNX runtime execution providers. Must be called after Initialize().
         /// </summary>
@@ -102,7 +118,7 @@ namespace halbautomaten.BackgroundSegmentation
             if (executionProviderIndex < executionProviders.Count)
             {
                 var path = Path.Combine(ModelFolder, modelInfo.OnnxModelName);
-                var result = BgSegModelInterface.LoadModel((int)modelInfo.OnnxModelType, path, executionProviders[executionProviderIndex]);
+                var result = BgSegModelInterface.LoadModel((int)modelInfo.OnnxModelType, path, executionProviders[executionProviderIndex], modelInfo.modelTensorWidth, modelInfo.modelTensorHeight);
                 if (!result)
                 {
                     IntPtr error = BgSegModelInterface.LastError();
@@ -146,6 +162,7 @@ namespace halbautomaten.BackgroundSegmentation
                 if (processPhase == 0)
                 {
                     // Debug.Log("Grabbing");
+
                     // Get input and output dimensions
                     inputDim[0] = webcamTexture.width;
                     inputDim[1] = webcamTexture.height;
@@ -165,12 +182,15 @@ namespace halbautomaten.BackgroundSegmentation
                     // Get texture data of input image
                     inputData = inputTexture.GetRawTextureData(); // TODO: Check garbage collection
 
+                    // Advance to next processing phase
                     processPhase++;
                 }
 
                 if (processPhase >= 1 && processPhase <= model.Count)
                 {
                     // Debug.Log($"Processing {processPhase}");
+
+                    // Select active model based on process phase
                     var modelIndex = processPhase - 1;
 
                     // Process each loaded models
@@ -182,36 +202,51 @@ namespace halbautomaten.BackgroundSegmentation
                     tex.LoadRawTextureData(outputData);
                     tex.Apply();
 
+                    // Advance to next processing phase
                     processPhase++;
                 }
 
-                if (model.Count > 0 ? processPhase > model.Count : true)
+                if (model.Count == 0 || processPhase > model.Count)
                 {
-                    // Debug.Log("Compositing");
-                    // Rewrite input used for processing to keep in sync with resulting alpha mask
                     if (imageTexture != null)
                     {
+                        // Debug.Log("Compositing");
+
+                        // Rewrite input used for processing to keep in sync with resulting alpha mask
                         outputTexture.LoadRawTextureData(inputData);
                         outputTexture.Apply();
                         Graphics.Blit(outputTexture, imageTexture);
+
+                        // Compute alpha mask via shader
+                        // TODO: work out suitable compositor shader that uses the model outputs to create an alpha mask
+
+                        // Set original input as foreground
+                        compositorMaterial.SetTexture("_MainTex", imageTexture);
+
+                        // Set matting and depth textures if their models are loaded
+                        haveMattingTex = false;
+                        for (int i = 0; i < modelResultTexture.Count; i++)
+                        {
+                            AssignTexToShaderProperty(i);
+                        }
+
+                        // Update depth threshold (only needed when depth model is loaded)
+                        compositorMaterial.SetFloat("_DepthEdge0", depthEdge0);
+                        compositorMaterial.SetFloat("_DepthEdge1", depthEdge1);
+
+                        // Apply shader to generate alpha mask texture
+                        Graphics.Blit(imageTexture, maskTexture, compositorMaterial);
                     }
 
-                    // Compute alpha mask via shader
-                    // TODO: work out suitable compositor shader that uses the model outputs to create an alpha mask
-                    compositorMaterial.SetTexture("_MainTex", imageTexture);
-                    // compositorMaterial.SetTexture("_MattingTex", modelResultTexture[0]);
-                    compositorMaterial.SetTexture("_MattingTex", modelResultTexture[0]);
-                    // compositorMaterial.SetTexture("_MattingTex", modelResultTexture[2]);
-                    // compositorMaterial.SetTexture("_DepthTex", modelResultTexture[2]);
-                    // compositorMaterial.SetTexture("_BackgroundTex", backgroundTexture);
-                    Graphics.Blit(imageTexture, maskTexture, compositorMaterial);
-
+                    // Rewind processing phases
                     processPhase = 0;
                 }
             }
             yield return null;
         }
 
+        //Call DLL interface method with ponters to image data
+        // As it pins memory, this method must be marked as unsafe
         unsafe void PerformInference(int modelId, byte[] inputData, int[] inputDim, byte[] outputData, int[] outputDim)
         {
             // Pin memory
@@ -265,6 +300,7 @@ namespace halbautomaten.BackgroundSegmentation
             }
         }
 
+        // Initialize a texture with given params
         void InitTexture(ref Texture2D tex, int width, int height, TextureFormat format)
         {
             if (tex == null)
@@ -278,6 +314,7 @@ namespace halbautomaten.BackgroundSegmentation
             }
         }
 
+        // Callback when copying a texture from GPU to CPU has finished
         void OnReadbackComplete(AsyncGPUReadbackRequest request)
         {
             if (request.hasError)
@@ -291,6 +328,47 @@ namespace halbautomaten.BackgroundSegmentation
             {
                 inputTexture.LoadRawTextureData(request.GetData<uint>());
                 inputTexture.Apply();
+            }
+        }
+
+        // Determine whether model provides matting information
+        bool IsMattingModel(BgSegModelInfo info)
+        {
+            return info.OnnxModelType == BgSegModelInterface.Models.MODNET ||
+                info.OnnxModelType == BgSegModelInterface.Models.PP_HUMANSEG;
+
+        }
+
+        // Determine whether model type provides depth information
+        bool IsDepthModel(BgSegModelInfo info)
+        {
+            return info.OnnxModelType == BgSegModelInterface.Models.MIDAS;
+        }
+
+        // Assign the selected model result texture to a matching shader property
+        // Distinguished between matting and depth model type
+        // Currently, up to two matting models are supported by the compositor shader
+        // If one matting texture was already assigned, then the next matting texture will be assigned to the second slot
+        void AssignTexToShaderProperty(int index)
+        {
+            if (compositorMaterial != null && modelResultTexture != null && modelResultTexture.Count > index)
+            {
+                if (IsMattingModel(model[index]))
+                {
+                    if (!haveMattingTex)
+                    {
+                        compositorMaterial.SetTexture("_MattingTex", modelResultTexture[index]);
+                        haveMattingTex = true;
+                    }
+                    else
+                    {
+                        compositorMaterial.SetTexture("_Matting2Tex", modelResultTexture[index]);
+                    }
+                }
+                else if (IsDepthModel(model[index]))
+                {
+                    compositorMaterial.SetTexture("_DepthTex", modelResultTexture[index]);
+                }
             }
         }
     }

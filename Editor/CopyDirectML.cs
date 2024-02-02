@@ -4,37 +4,43 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-[InitializeOnLoad]
-public class CopyDirectML
+namespace halbautomaten.BackgroundSegmentation
 {
-    static CopyDirectML()
+    /// <summary>
+    /// Tries to copy DirectML.dll to the same location as the Unity Editor executable
+    /// </summary>
+    [InitializeOnLoad]
+    public class CopyDirectML
     {
-        Process();
-    }
-
-    private static void Process()
-    {
-        var dll = "DirectML.dll";
-        var architecture = "x86_64";
-        var editor = Directory.GetParent(EditorApplication.applicationPath).ToString();
-        var root = Directory.GetCurrentDirectory();
-        var files = Directory.GetFiles(root, dll, SearchOption.AllDirectories);
-        foreach (var file in files)
+        static CopyDirectML()
         {
-            if (file.Contains(architecture))
+            Process();
+        }
+
+        private static void Process()
+        {
+            var dll = "DirectML.dll";
+            var architecture = "x86_64";
+            var editor = Directory.GetParent(EditorApplication.applicationPath).ToString();
+            var root = Directory.GetCurrentDirectory();
+            var files = Directory.GetFiles(root, dll, SearchOption.AllDirectories);
+            foreach (var file in files)
             {
-                var target = Path.Combine(editor, dll);
-                if (!File.Exists(target))
+                if (file.Contains(architecture))
                 {
-                    try
+                    var target = Path.Combine(editor, dll);
+                    if (!File.Exists(target))
                     {
-                        File.Copy(file, target);
-                        Debug.Log($"Copied {file} to {target}");
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        Debug.LogWarning($"Could not copy a required DLL from {file} to {target}. You need to copy this manually.");
-                        // FIXME: handle permission denied error
+                        try
+                        {
+                            File.Copy(file, target);
+                            Debug.Log($"Copied {file} to {target}");
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            Debug.LogWarning($"Could not copy a required DLL from {file} to {target}. You need to copy this manually.");
+                            // FIXME: handle permission denied error
+                        }
                     }
                 }
             }
