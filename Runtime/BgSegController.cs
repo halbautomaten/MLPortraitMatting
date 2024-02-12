@@ -36,6 +36,8 @@ namespace halbautomaten.BackgroundSegmentation
         public float DepthEdge0 { set => depthEdge0 = value; }
         public float DepthEdge1 { set => depthEdge1 = value; }
 
+        public bool EnableLogging = false;
+
         string ModelFolder
         {
             get
@@ -129,7 +131,9 @@ namespace halbautomaten.BackgroundSegmentation
                 {
                     // ... prepare anything else?
                     // ... inform UI?
-                    Debug.Log($"Successfully loaded new ONNX model {modelInfo.OnnxModelName} running on {executionProviders[executionProviderIndex]}");
+                    
+                    if(EnableLogging)
+                        Debug.Log($"Successfully loaded new ONNX model {modelInfo.OnnxModelName} running on {executionProviders[executionProviderIndex]}");
 
                     // Add model to list
                     model.Add(modelInfo);
@@ -161,8 +165,6 @@ namespace halbautomaten.BackgroundSegmentation
             {
                 if (processPhase == 0)
                 {
-                    // Debug.Log("Grabbing");
-
                     // Get input and output dimensions
                     inputDim[0] = webcamTexture.width;
                     inputDim[1] = webcamTexture.height;
@@ -270,7 +272,10 @@ namespace halbautomaten.BackgroundSegmentation
 
             var root = ModelFolder;
             var files = Directory.GetFiles(root, "*.onnx");
-            Debug.Log($"Found {files.Length} ONNX models");
+            
+            if(EnableLogging)
+                Debug.Log($"Found {files.Length} ONNX models");
+            
             foreach (var file in files)
             {
                 modelPaths.Add(file);
@@ -289,7 +294,9 @@ namespace halbautomaten.BackgroundSegmentation
             executionProviders.Clear();
 
             int count = BgSegModelInterface.GetNumProviders();
-            Debug.Log($"Found {count} ONNX execution providers");
+            
+            if(EnableLogging)
+                Debug.Log($"Found {count} ONNX execution providers");
 
             for (var i = 0; i < count; i++)
             {
