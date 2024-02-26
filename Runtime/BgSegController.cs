@@ -17,10 +17,10 @@ namespace halbautomaten.BackgroundSegmentation
         List<string> modelNames = new();
         List<string> modelPaths = new();
 
-        byte[] inputData = { 0 };
-        byte[] outputData = { 0 };
-        int[] inputDim = { 0, 0 };
-        int[] outputDim = { 0, 0 };
+        byte[] inputData = {0};
+        byte[] outputData = {0};
+        int[] inputDim = {0, 0};
+        int[] outputDim = {0, 0};
 
         bool isInitialized = false;
         List<BgSegModelInfo> model = new();
@@ -33,10 +33,17 @@ namespace halbautomaten.BackgroundSegmentation
         float depthEdge0 = 0.35f;
         float depthEdge1 = 0.65f;
 
-        public float DepthEdge0 { set => depthEdge0 = value; }
-        public float DepthEdge1 { set => depthEdge1 = value; }
+        public float DepthEdge0
+        {
+            set => depthEdge0 = value;
+        }
 
-        public bool EnableLogging = false;
+        public float DepthEdge1
+        {
+            set => depthEdge1 = value;
+        }
+
+        public bool EnableLogging;
 
         string ModelFolder
         {
@@ -78,9 +85,11 @@ namespace halbautomaten.BackgroundSegmentation
             var shader = Shader.Find("BackgroundSegmentation/Compositor");
             if (shader == null)
             {
-                Debug.LogError("[BackgroundSegmentation] Could not find compositor shader! Using default shader, which only shows the input image.");
+                Debug.LogError(
+                    "[BackgroundSegmentation] Could not find compositor shader! Using default shader, which only shows the input image.");
                 shader = Shader.Find("Unlit/Texture");
             }
+
             compositorMaterial = new Material(shader);
 
             isInitialized = true;
@@ -120,7 +129,9 @@ namespace halbautomaten.BackgroundSegmentation
             if (executionProviderIndex < executionProviders.Count)
             {
                 var path = Path.Combine(ModelFolder, modelInfo.OnnxModelName);
-                var result = BgSegModelInterface.LoadModel((int)modelInfo.OnnxModelType, path, executionProviders[executionProviderIndex], modelInfo.modelTensorWidth, modelInfo.modelTensorHeight);
+                var result = BgSegModelInterface.LoadModel((int) modelInfo.OnnxModelType, path,
+                    executionProviders[executionProviderIndex], modelInfo.modelTensorWidth,
+                    modelInfo.modelTensorHeight);
                 if (!result)
                 {
                     IntPtr error = BgSegModelInterface.LastError();
@@ -131,9 +142,9 @@ namespace halbautomaten.BackgroundSegmentation
                 {
                     // ... prepare anything else?
                     // ... inform UI?
-                    
-                    if(EnableLogging)
-                        Debug.Log($"Successfully loaded new ONNX model {modelInfo.OnnxModelName} running on {executionProviders[executionProviderIndex]}");
+                    if (EnableLogging)
+                        Debug.Log(
+                            $"Successfully loaded new ONNX model {modelInfo.OnnxModelName} running on {executionProviders[executionProviderIndex]}");
 
                     // Add model to list
                     model.Add(modelInfo);
@@ -159,7 +170,8 @@ namespace halbautomaten.BackgroundSegmentation
         /// <param name="imageTexture">The input image used for each inference within one pipeline run (this is in sync with the output mask image)</param>
         /// <param name="maskTexture">The resulting alpha mask</param>
         /// <returns></returns>
-        public IEnumerator ProcessImage(RenderTexture webcamTexture, RenderTexture imageTexture, RenderTexture maskTexture)
+        public IEnumerator ProcessImage(RenderTexture webcamTexture, RenderTexture imageTexture,
+            RenderTexture maskTexture)
         {
             if (webcamTexture != null && maskTexture != null)
             {
@@ -179,7 +191,8 @@ namespace halbautomaten.BackgroundSegmentation
                     }
 
                     // Download image texture data from GPU to CPU
-                    AsyncGPUReadback.Request(webcamTexture, 0, inputTexture.format, OnReadbackComplete); // copies to inputTexture
+                    AsyncGPUReadback.Request(webcamTexture, 0, inputTexture.format,
+                        OnReadbackComplete); // copies to inputTexture
 
                     // Get texture data of input image
                     inputData = inputTexture.GetRawTextureData(); // TODO: Check garbage collection
@@ -190,13 +203,11 @@ namespace halbautomaten.BackgroundSegmentation
 
                 if (processPhase >= 1 && processPhase <= model.Count)
                 {
-                    // Debug.Log($"Processing {processPhase}");
-
                     // Select active model based on process phase
                     var modelIndex = processPhase - 1;
 
                     // Process each loaded models
-                    PerformInference((int)model[modelIndex].OnnxModelType, inputData, inputDim, outputData, outputDim);
+                    PerformInference((int) model[modelIndex].OnnxModelType, inputData, inputDim, outputData, outputDim);
 
                     // Adjust internal working textures and copy result
                     var tex = modelResultTexture[modelIndex];
@@ -212,8 +223,6 @@ namespace halbautomaten.BackgroundSegmentation
                 {
                     if (imageTexture != null)
                     {
-                        // Debug.Log("Compositing");
-
                         // Rewrite input used for processing to keep in sync with resulting alpha mask
                         outputTexture.LoadRawTextureData(inputData);
                         outputTexture.Apply();
@@ -244,6 +253,7 @@ namespace halbautomaten.BackgroundSegmentation
                     processPhase = 0;
                 }
             }
+
             yield return null;
         }
 
@@ -254,7 +264,7 @@ namespace halbautomaten.BackgroundSegmentation
             // Pin memory
             fixed (byte* p = inputData, q = outputData)
             {
-                var ret = BgSegModelInterface.RunModel(modelId, (IntPtr)p, inputDim, (IntPtr)q, outputDim);
+                var ret = BgSegModelInterface.RunModel(modelId, (IntPtr) p, inputDim, (IntPtr) q, outputDim);
                 if (!ret)
                 {
                     IntPtr error = BgSegModelInterface.LastError();
@@ -273,7 +283,7 @@ namespace halbautomaten.BackgroundSegmentation
             var root = ModelFolder;
             var files = Directory.GetFiles(root, "*.onnx");
             
-            if(EnableLogging)
+            if (EnableLogging)
                 Debug.Log($"Found {files.Length} ONNX models");
             
             foreach (var file in files)
@@ -295,7 +305,7 @@ namespace halbautomaten.BackgroundSegmentation
 
             int count = BgSegModelInterface.GetNumProviders();
             
-            if(EnableLogging)
+            if (EnableLogging)
                 Debug.Log($"Found {count} ONNX execution providers");
 
             for (var i = 0; i < count; i++)
@@ -342,8 +352,7 @@ namespace halbautomaten.BackgroundSegmentation
         bool IsMattingModel(BgSegModelInfo info)
         {
             return info.OnnxModelType == BgSegModelInterface.Models.MODNET ||
-                info.OnnxModelType == BgSegModelInterface.Models.PP_HUMANSEG;
-
+                   info.OnnxModelType == BgSegModelInterface.Models.PP_HUMANSEG;
         }
 
         // Determine whether model type provides depth information
