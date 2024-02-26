@@ -1,7 +1,9 @@
 {
     "name": "halbautomaten.backgroundsegmentation.Editor",
     "rootNamespace": "halbautomaten.BackgroundSegmentation",
-    "references": [],
+    "references": [
+        "GUID:bacfbb4f2db5924448db0baef1db7d7e"
+    ],
     "includePlatforms": [
         "Editor",
         "WindowsStandalone64"
