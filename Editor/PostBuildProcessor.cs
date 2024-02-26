@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Callbacks;
@@ -24,7 +25,7 @@ namespace halbautomaten.BackgroundSegmentation
             var source = Path.GetFullPath(Path.Combine("Packages", package));
             var build = Path.GetDirectoryName(pathToBuildProject);
 
-            // Copy DirectML.dll 
+            // Copy DirectML.dll
             var dllDst = Path.Combine(build, dll);
             if (!File.Exists(dllDst))
             {
@@ -48,8 +49,25 @@ namespace halbautomaten.BackgroundSegmentation
                 Debug.Log($"Created directory {onnxDst}");
             }
 
+            // Remove existing ONNX models from previous build
+            var removeModels = Directory.GetFiles(Path.Combine(build, models), onnx);
+            foreach (var file in removeModels)
+            {
+                File.Delete(file);
+            }
+
             // Copy ONNX models
-            var files = Directory.GetFiles(Path.Combine(source, models), onnx);
+            List<string> files = new();
+            foreach (UnityEngine.Object go in Resources.FindObjectsOfTypeAll(typeof(UnityEngine.Object)) as UnityEngine.Object[])
+            {
+                BgSegModelInfo modelInfo = go as BgSegModelInfo;
+                if (modelInfo != null)
+                {
+                    Debug.Log($"Found reference in scene to ONNX model: {modelInfo.OnnxModelName}");
+                    var path = Path.Combine(source, models, modelInfo.OnnxModelName);
+                    files.Add(path);
+                }
+            }
             foreach (var file in files)
             {
                 var name = Path.GetFileName(file);
