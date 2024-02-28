@@ -24,7 +24,8 @@ namespace halbautomaten.BackgroundSegmentation
 
         bool isInitialized = false;
         List<BgSegModelInfo> model = new();
-        Texture2D inputTexture, outputTexture;
+        public Texture2D inputTexture;
+		Texture2D outputTexture;
         List<Texture2D> modelResultTexture = new();
         Material compositorMaterial;
         int processPhase = 0;
@@ -57,6 +58,8 @@ namespace halbautomaten.BackgroundSegmentation
         {
             return modelResultTexture[index];
         }
+
+
 
         /// <summary>
         /// Initialize the ONNX runtime, collect available execution providers and initialize internal working textures
