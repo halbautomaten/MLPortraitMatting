@@ -66,6 +66,7 @@ namespace halbautomaten.BackgroundSegmentation
         public void Initialize(int width, int height)
         {
             isInitialized = false;
+			
             BgSegModelInterface.InitONNXRuntime();
             CollectExecutionProviders();
 
@@ -157,6 +158,9 @@ namespace halbautomaten.BackgroundSegmentation
         /// <returns></returns>
         public IEnumerator ProcessImage(RenderTexture webcamTexture, RenderTexture imageTexture, RenderTexture maskTexture)
         {
+            if(!isInitialized)
+                yield break;
+            
             if (webcamTexture != null && maskTexture != null)
             {
                 if (processPhase == 0)
