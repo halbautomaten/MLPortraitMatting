@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   OnnxModelName: modnet_webcam_portrait_matting.onnx
   OnnxModelType: 0
-  modelTensorWidth: 896
-  modelTensorHeight: 512
+  modelTensorWidth: 128
+  modelTensorHeight: 128
