@@ -90,6 +90,7 @@ namespace halbautomaten.BackgroundSegmentation
 
         public void CleanUp()
         {
+            model = new();
             BgSegModelInterface.CleanUp();
             isInitialized = false;
         }
